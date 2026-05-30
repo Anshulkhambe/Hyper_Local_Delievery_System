@@ -39,106 +39,152 @@ const RouteMap = () => {
     }
   };
 
-  // Leaflet map initialization and updates
+  // Google Maps initialization and updates
   useEffect(() => {
-    if (loading || !window.L) return;
+    if (loading || !window.google || !window.google.maps) return;
 
-    // Clean up previous map instance
-    if (mapInstanceRef.current) {
-      mapInstanceRef.current.remove();
-      mapInstanceRef.current = null;
-    }
-
-    const mapContainer = document.getElementById('leaflet-map');
+    const mapContainer = document.getElementById('google-map');
     if (!mapContainer) return;
 
     // Initialize Map centered around Hub
-    const map = window.L.map('leaflet-map').setView([SHOP_LAT, SHOP_LNG], 13);
+    const map = new window.google.maps.Map(mapContainer, {
+      center: { lat: SHOP_LAT, lng: SHOP_LNG },
+      zoom: 13,
+      mapTypeControl: false,
+      streetViewControl: false,
+      fullscreenControl: false,
+      styles: [
+        {
+          "featureType": "administrative",
+          "elementType": "geometry",
+          "stylers": [{ "visibility": "off" }]
+        }
+      ]
+    });
     mapInstanceRef.current = map;
 
-    // OpenStreetMap Tile Layer
-    window.L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      maxZoom: 19,
-      attribution: '© OpenStreetMap contributors'
-    }).addTo(map);
-
-    // Dynamic custom styled marker for Central Hub (Shop)
-    const hubIcon = window.L.divIcon({
-      html: `<div class="w-8 h-8 rounded-full bg-indigo-600 border-2 border-white flex items-center justify-center text-white shadow-lg font-black text-xs">Hub</div>`,
-      className: '',
-      iconSize: [32, 32],
-      iconAnchor: [16, 16]
-    });
-    window.L.marker([SHOP_LAT, SHOP_LNG], { icon: hubIcon })
-      .addTo(map)
-      .bindPopup('<b>Central Hub (Shop)</b><br>Bengaluru Main Road')
-      .openPopup();
-
-    // Create markers for delivery stops
-    deliveries.forEach((delivery, index) => {
-      const stopIcon = window.L.divIcon({
-        html: `<div class="w-8 h-8 rounded-full bg-amber-500 border-2 border-white flex items-center justify-center text-white shadow-lg font-black text-xs">#${index + 1}</div>`,
-        className: '',
-        iconSize: [32, 32],
-        iconAnchor: [16, 16]
-      });
-      window.L.marker([delivery.order.latitude, delivery.order.longitude], { icon: stopIcon })
-        .addTo(map)
-        .bindPopup(`<b>Stop #${index + 1}: ${delivery.order.customerName}</b><br>${delivery.order.address}<br>Status: <i>${delivery.status.replace(/_/g, ' ')}</i>`);
-    });
-
-    // Trace real-world driving route using OSRM API
-    if (deliveries.length > 0) {
-      const coordinates = [
-        `${SHOP_LNG},${SHOP_LAT}`,
-        ...deliveries.map(d => `${d.order.longitude},${d.order.latitude}`)
-      ].join(';');
-
-      const osrmUrl = `https://router.project-osrm.org/route/v1/driving/${coordinates}?overview=full&geometries=geojson`;
-
-      fetch(osrmUrl)
-        .then(res => res.json())
-        .then(data => {
-          if (data.routes && data.routes.length > 0) {
-            const routeCoords = data.routes[0].geometry.coordinates.map(coord => [coord[1], coord[0]]); // [lat, lng]
-            const polyline = window.L.polyline(routeCoords, {
-              color: '#4f46e5', // indigo-600
-              weight: 5,
-              opacity: 0.8,
-              lineCap: 'round',
-              lineJoin: 'round'
-            }).addTo(map);
-            map.fitBounds(polyline.getBounds(), { padding: [50, 50] });
-          } else {
-            drawFallbackLines(map);
-          }
-        })
-        .catch(err => {
-          console.error('OSRM API failed, falling back to direct paths:', err);
-          drawFallbackLines(map);
-        });
-    }
-
-    return () => {
-      if (mapInstanceRef.current) {
-        mapInstanceRef.current.remove();
-        mapInstanceRef.current = null;
+    // Custom Styled Marker for Central Hub (Shop) using Vector Symbols
+    const hubMarker = new window.google.maps.Marker({
+      position: { lat: SHOP_LAT, lng: SHOP_LNG },
+      map: map,
+      title: "Central Hub (Shop)",
+      icon: {
+        path: window.google.maps.SymbolPath.BACKWARD_CLOSED_ARROW,
+        scale: 6,
+        fillColor: "#4f46e5", // Indigo-600
+        fillOpacity: 1,
+        strokeWeight: 2,
+        strokeColor: "#ffffff"
       }
-    };
+    });
+
+    const hubInfoWindow = new window.google.maps.InfoWindow({
+      content: '<div style="padding: 4px; color: #1e293b; font-weight: bold; font-family: sans-serif;">Central Hub (Shop)</div>'
+    });
+    hubMarker.addListener("click", () => {
+      hubInfoWindow.open(map, hubMarker);
+    });
+
+    // Create bounds and add markers for delivery stops
+    const bounds = new window.google.maps.LatLngBounds();
+    bounds.extend(new window.google.maps.LatLng(SHOP_LAT, SHOP_LNG));
+
+    deliveries.forEach((delivery, index) => {
+      const stopLatLng = { lat: delivery.order.latitude, lng: delivery.order.longitude };
+      bounds.extend(new window.google.maps.LatLng(delivery.order.latitude, delivery.order.longitude));
+
+      const stopMarker = new window.google.maps.Marker({
+        position: stopLatLng,
+        map: map,
+        title: delivery.order.customerName,
+        label: {
+          text: `${index + 1}`,
+          color: "#ffffff",
+          fontWeight: "bold",
+          fontSize: "11px"
+        },
+        icon: {
+          path: window.google.maps.SymbolPath.CIRCLE,
+          scale: 12,
+          fillColor: "#f59e0b", // Amber-500
+          fillOpacity: 1,
+          strokeWeight: 2,
+          strokeColor: "#ffffff"
+        }
+      });
+
+      const stopInfoWindow = new window.google.maps.InfoWindow({
+        content: `
+          <div style="padding: 8px; color: #1e293b; font-family: sans-serif;">
+            <h4 style="font-weight: bold; margin: 0 0 4px 0; font-size: 13px;">Stop #${index + 1}: ${delivery.order.customerName}</h4>
+            <p style="font-size: 11px; margin: 0 0 6px 0; color: #64748b;">${delivery.order.address}</p>
+            <span style="font-size: 9px; font-weight: 800; text-transform: uppercase; background: #f1f5f9; padding: 2px 6px; border-radius: 4px; color: #475569;">${delivery.status.replace(/_/g, ' ')}</span>
+          </div>
+        `
+      });
+
+      stopMarker.addListener("click", () => {
+        stopInfoWindow.open(map, stopMarker);
+      });
+    });
+
+    // Google Maps Directions service routing
+    if (deliveries.length > 0) {
+      const directionsService = new window.google.maps.DirectionsService();
+      const directionsRenderer = new window.google.maps.DirectionsRenderer({
+        map: map,
+        suppressMarkers: true,
+        polylineOptions: {
+          strokeColor: '#4f46e5',
+          strokeWeight: 5,
+          strokeOpacity: 0.8
+        }
+      });
+
+      const origin = new window.google.maps.LatLng(SHOP_LAT, SHOP_LNG);
+      const destination = new window.google.maps.LatLng(
+        deliveries[deliveries.length - 1].order.latitude,
+        deliveries[deliveries.length - 1].order.longitude
+      );
+
+      const waypoints = deliveries.slice(0, -1).map(d => ({
+        location: new window.google.maps.LatLng(d.order.latitude, d.order.longitude),
+        stopover: true
+      }));
+
+      directionsService.route({
+        origin: origin,
+        destination: destination,
+        waypoints: waypoints,
+        optimizeWaypoints: false, // Follow our local N-N sequence optimization
+        travelMode: window.google.maps.TravelMode.DRIVING
+      }, (result, status) => {
+        if (status === 'OK') {
+          directionsRenderer.setDirections(result);
+        } else {
+          console.warn('Google Directions failed:', status);
+          drawGoogleFallbackLines(map);
+        }
+      });
+    } else {
+      map.fitBounds(bounds);
+    }
   }, [deliveries, loading]);
 
-  // Fallback straight lines in case OSRM is offline or blocked
-  const drawFallbackLines = (map) => {
-    const points = [
-      [SHOP_LAT, SHOP_LNG],
-      ...deliveries.map(d => [d.order.latitude, d.order.longitude])
+  // Fallback straight lines in case Google routing is offline or limits occur
+  const drawGoogleFallbackLines = (map) => {
+    const flightPlanCoordinates = [
+      { lat: SHOP_LAT, lng: SHOP_LNG },
+      ...deliveries.map(d => ({ lat: d.order.latitude, lng: d.order.longitude }))
     ];
-    const polyline = window.L.polyline(points, {
-      color: '#ef4444', // red-500 fallback
-      weight: 4,
-      dashArray: '8 6'
-    }).addTo(map);
-    map.fitBounds(polyline.getBounds(), { padding: [50, 50] });
+    const flightPath = new window.google.maps.Polyline({
+      path: flightPlanCoordinates,
+      geodesic: true,
+      strokeColor: '#ef4444',
+      strokeOpacity: 0.8,
+      strokeWeight: 4
+    });
+    flightPath.setMap(map);
   };
 
   return (
@@ -148,7 +194,7 @@ const RouteMap = () => {
         <header className="flex justify-between items-center mb-10">
           <div>
             <h2 className="text-3xl font-bold">Route Map</h2>
-            <p className="text-slate-500">Live spatial navigation powered by OSRM Smart Routing</p>
+            <p className="text-slate-500">Live spatial navigation powered by Google Maps Directions AI</p>
           </div>
           <button 
             onClick={fetchActiveDeliveries}
@@ -167,16 +213,16 @@ const RouteMap = () => {
           </div>
         ) : (
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            {/* Interactive Leaflet Map Container */}
+            {/* Google Maps Container */}
             <div className="lg:col-span-2 glass-card p-6 rounded-3xl flex flex-col">
               <div className="flex items-center gap-2 mb-4">
                 <MapIcon className="text-indigo-600" size={20} />
-                <span className="font-bold">Live AI Map View (Street Navigation)</span>
+                <span className="font-bold">Live Google Maps View (Street Navigation)</span>
               </div>
 
               {/* Map element */}
               <div 
-                id="leaflet-map" 
+                id="google-map" 
                 className="w-full h-[480px] rounded-2xl border border-slate-200/60 dark:border-slate-800/60 shadow-lg z-10"
               />
             </div>
