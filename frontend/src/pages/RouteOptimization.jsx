@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import Sidebar from '../components/Sidebar';
-import { Map, Zap, UserPlus, MapPin, Navigation, ArrowRight, CheckCircle2 } from 'lucide-react';
+import { Map, Zap, UserPlus, MapPin, Navigation, ArrowRight, CheckCircle2, Leaf, Globe } from 'lucide-react';
 import api from '../services/api';
 import { toast } from 'react-toastify';
 import { motion } from 'framer-motion';
@@ -196,15 +196,49 @@ const RouteOptimization = () => {
               </div>
             </div>
 
-            <div className="glass-card p-8 rounded-3xl bg-indigo-600 text-white border-none">
-              <div className="flex items-center gap-2 mb-2">
-                <CheckCircle2 size={16} />
-                <span className="text-xs font-bold uppercase opacity-80">Route Insight</span>
+            {optimizedRoute.length > 0 ? (
+              <motion.div 
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="glass-card p-8 rounded-3xl bg-gradient-to-br from-emerald-600 to-teal-700 text-white border-none shadow-lg shadow-emerald-600/20"
+              >
+                <div className="flex items-center gap-2 mb-4 border-b border-white/20 pb-3">
+                  <Leaf className="text-emerald-200 animate-bounce" size={20} />
+                  <span className="text-xs font-black uppercase tracking-wider text-emerald-100">Green Fleet Eco-Impact</span>
+                </div>
+                <p className="font-bold text-sm mb-6 leading-snug">
+                  This optimized dispatch saves fuel and directly minimizes excessive greenhouse gas emissions!
+                </p>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="bg-white/10 rounded-2xl p-4">
+                    <p className="text-[10px] uppercase font-black text-emerald-200">CO₂ Prevented</p>
+                    <p className="text-xl font-black mt-1">{(getTotalDistance() * 0.32 * 0.12).toFixed(2)} kg</p>
+                  </div>
+                  <div className="bg-white/10 rounded-2xl p-4">
+                    <p className="text-[10px] uppercase font-black text-emerald-200">Fuel Saved</p>
+                    <p className="text-xl font-black mt-1">{(getTotalDistance() * 0.32 * 0.08).toFixed(2)} L</p>
+                  </div>
+                  <div className="bg-white/10 rounded-2xl p-4 col-span-2 flex items-center justify-between">
+                    <div>
+                      <p className="text-[10px] uppercase font-black text-emerald-200">Eco-Offset Equivalent</p>
+                      <p className="text-lg font-black mt-1">{(getTotalDistance() * 0.32 * 0.12 / 0.06).toFixed(1)} Tree-Days</p>
+                    </div>
+                    <Globe className="text-emerald-200/40" size={32} />
+                  </div>
+                </div>
+              </motion.div>
+            ) : (
+              <div className="glass-card p-8 rounded-3xl bg-indigo-600 text-white border-none">
+                <div className="flex items-center gap-2 mb-2">
+                  <CheckCircle2 size={16} />
+                  <span className="text-xs font-bold uppercase opacity-80">Route Insight</span>
+                </div>
+                <p className="font-medium text-sm">
+                  Optimized route reduces travel time by <span className="text-emerald-300 font-bold">24%</span> compared to manual assignment.
+                </p>
               </div>
-              <p className="font-medium text-sm">
-                Optimized route reduces travel time by <span className="text-emerald-300 font-bold">24%</span> compared to manual assignment.
-              </p>
-            </div>
+            )}
           </div>
         </div>
       </main>

@@ -14,6 +14,7 @@ import LandingPage from './pages/LandingPage';
 import MyDeliveries from './pages/MyDeliveries';
 import RouteMap from './pages/RouteMap';
 import DeliveryAgents from './pages/DeliveryAgents';
+import Leaderboard from './pages/Leaderboard';
 
 const ProtectedRoute = ({ children, allowedRoles }) => {
   const { user } = useAuth();
@@ -67,6 +68,12 @@ function App() {
             <Route path="/route" element={
               <ProtectedRoute allowedRoles={['DELIVERY_BOY']}>
                 <RouteMap />
+              </ProtectedRoute>
+            } />
+
+            <Route path="/leaderboard" element={
+              <ProtectedRoute allowedRoles={['ADMIN', 'DELIVERY_BOY']}>
+                <Leaderboard />
               </ProtectedRoute>
             } />
 

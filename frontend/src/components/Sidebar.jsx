@@ -8,7 +8,8 @@ import {
   LogOut, 
   Truck,
   Settings,
-  ChevronRight
+  ChevronRight,
+  Trophy
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import Swal from 'sweetalert2';
@@ -21,11 +22,13 @@ const Sidebar = () => {
     { name: 'Orders', path: '/orders', icon: ShoppingBag },
     { name: 'Route Optimization', path: '/optimize', icon: Map },
     { name: 'Delivery Agents', path: '/agents', icon: Users },
+    { name: 'Leaderboard', path: '/leaderboard', icon: Trophy },
   ];
 
   const deliveryLinks = [
     { name: 'My Deliveries', path: '/deliveries', icon: Truck },
     { name: 'Route Map', path: '/route', icon: Map },
+    { name: 'Leaderboard', path: '/leaderboard', icon: Trophy },
   ];
 
   const links = user?.role === 'ADMIN' ? adminLinks : deliveryLinks;
